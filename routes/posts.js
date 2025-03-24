@@ -26,6 +26,11 @@ router.get('/', ensureAuthenticated, async (req, res) => {
   }
 });
 
+// 创建帖子页面
+router.get('/new', ensureAuthenticated, (req, res) => {
+  res.render('new_post');
+});
+
 // 获取单个帖子
 router.get('/:id', ensureAuthenticated, async (req, res) => {
   try {
@@ -40,10 +45,7 @@ router.get('/:id', ensureAuthenticated, async (req, res) => {
   }
 });
 
-// 创建帖子页面
-router.get('/new', ensureAuthenticated, (req, res) => {
-  res.render('new_post');
-});
+
 
 // 处理创建帖子
 router.post('/', ensureAuthenticated, upload.array('images', 5), async (req, res) => {

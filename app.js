@@ -25,12 +25,10 @@ app.use(passport.session());
 
 // 静态文件
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.urlencoded({ extended: true }));
 
 // 连接 MongoDB
-mongoose.connect('mongodb://localhost:27017/social_platform', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
+mongoose.connect('mongodb://localhost:27017/social_platform');
 
 // Passport 配置
 require('./config/passport')(passport);
@@ -58,6 +56,7 @@ const postRoutes = require('./routes/posts');
 
 app.use('/', authRoutes);
 app.use('/posts', postRoutes);
+
 
 // 根路由
 app.get('/', (req, res) => {
