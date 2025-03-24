@@ -1,0 +1,29 @@
+<h1><%= post.author.username %>的帖子</h1>
+<p><%= post.content %></p>
+<% if (post.images.length > 0) { %>
+  <% post.images.forEach(image => { %>
+    <img src="<%= image %>" alt="Post image" width="200">
+  <% }) %>
+<% } %>
+<p>点赞数: <%= post.likes.length %></p>
+<form action="/posts/<%= post._id %>/like" method="POST">
+  <button type="submit">点赞</button>
+</form>
+
+<h2>评论</h2>
+<% comments.forEach(comment => { %>
+  <div>
+    <h3><%= comment.author.username %></h3>
+    <p><%= comment.content %></p>
+    <p>点赞数: <%= comment.likes.length %></p>
+    <form action="/comments/<%= comment._id %>/like" method="POST">
+      <button type="submit">点赞评论</button>
+    </form>
+  </div>
+<% }) %>
+
+<h2>添加评论</h2>
+<form action="/posts/<%= post._id %>/comments" method="POST">
+  <textarea name="content" required></textarea>
+  <button type="submit">评论</button>
+</form>
