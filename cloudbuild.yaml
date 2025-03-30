@@ -1,0 +1,24 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      [
+        'build',
+        '-t',
+        'us-central1-docker.pkg.dev/$PROJECT_ID/social-app-repo/social-app',
+        '.'
+      ]
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/social-app-repo/social-app']
+
+  - name: 'gcr.io/cloud-builders/kubectl'
+    env:
+      - 'CLOUDSDK_COMPUTE_REGION=us-central1'
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-c'
+    args:
+      - 'apply'
+      - '-f'
+      - 'k8s/prod/'
+
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/social-app-repo/social-app'

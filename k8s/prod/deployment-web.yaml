@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: social-app-prod
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: social-app
+  template:
+    metadata:
+      labels:
+        app: social-app
+    spec:
+      containers:
+      - name: web
+        image: us-central1-docker.pkg.dev/YOUR_PROJECT_ID/social-app-repo/social-app
+        ports:
+        - containerPort: 3000
+        env:
+        - name: MONGO_URI
+          valueFrom:
+            secretKeyRef:
+              name: social-secrets
+              key: MONGO_URI
+        - name: SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: social-secrets
+              key: SESSION_SECRET
