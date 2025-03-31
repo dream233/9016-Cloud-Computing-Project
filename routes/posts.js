@@ -1,27 +1,32 @@
 const express = require('express');
 const router = express.Router();
-const { knex } = require('../app');
+const knex = require('../db');
 const { v4: uuidv4 } = require('uuid');
 const { ensureAuthenticated } = require('../middleware/auth');
 const multer = require('multer');
 const { Storage } = require('@google-cloud/storage');
 
-// 配置Cloud Storage
-const storage = new Storage();
-const bucket = storage.bucket('social_platform_image'); // 替换为你的存储桶名称
+// 配置 Cloud Storage
+const storage = new Storage({
+  keyFilename: 'D:/BaiduSyncdisk/western文件/25Winter/ece9016/prismatic-fact-455403-c4-9e843b43904b.json'
+});
+const bucket = storage.bucket('social_platform_image');
 
-// 配置Multer（内存存储，文件将直接上传到Cloud Storage）
+// 配置 Multer
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 } // 限制文件大小为5MB
+  limits: { fileSize: 5 * 1024 * 1024 }
 });
 
 // 获取所有帖子
 router.get('/', ensureAuthenticated, async (req, res) => {
   try {
     const posts = await knex('posts')
-      .join('users', 'posts.author_id', 'users.id')
-      .select('posts.*', 'users.username')
+      .leftJoin('users', 'posts.author_id', 'users.id')
+      .select(
+        'posts.*',
+        knex.raw('users.username as "author_username"')
+      )
       .orderBy('posts.timestamp', 'desc');
     
     const postsWithImagesAndLikes = await Promise.all(posts.map(async (post) => {
@@ -34,13 +39,15 @@ router.get('/', ensureAuthenticated, async (req, res) => {
         .first();
       return {
         ...post,
+        author: { username: post.author_username || 'Unknown' },
         images: images.map(img => img.image_url),
-        likes: likes ? likes.count : 0
+        likes: likes ? Number(likes.count) : 0
       };
     }));
     
     res.render('posts', { posts: postsWithImagesAndLikes });
   } catch (err) {
+    console.error(err);
     res.status(500).send(err.message);
   }
 });
@@ -56,14 +63,12 @@ router.post('/', ensureAuthenticated, upload.array('images', 5), async (req, res
     const { content } = req.body;
     const postId = uuidv4();
     
-    // 插入帖子
     await knex('posts').insert({
       id: postId,
       author_id: req.user.id,
       content
     });
 
-    // 上传图片到Cloud Storage
     const imageUrls = [];
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
@@ -71,6 +76,7 @@ router.post('/', ensureAuthenticated, upload.array('images', 5), async (req, res
         const blobStream = blob.createWriteStream({
           resumable: false,
           metadata: { contentType: file.mimetype }
+          // 移除 predefinedAcl，因为统一存储桶级访问忽略 ACL
         });
 
         await new Promise((resolve, reject) => {
@@ -83,12 +89,12 @@ router.post('/', ensureAuthenticated, upload.array('images', 5), async (req, res
         imageUrls.push({ id: uuidv4(), post_id: postId, image_url: publicUrl });
       }
 
-      // 插入图片URL到数据库
       await knex('post_images').insert(imageUrls);
     }
 
     res.redirect('/posts');
   } catch (err) {
+    console.error(err);
     res.status(500).send(err.message);
   }
 });
@@ -101,9 +107,12 @@ router.get('/:id', ensureAuthenticated, async (req, res) => {
 
   try {
     const post = await knex('posts')
-      .join('users', 'posts.author_id', 'users.id')
+      .leftJoin('users', 'posts.author_id', 'users.id')
       .where('posts.id', req.params.id)
-      .select('posts.*', 'users.username')
+      .select(
+        'posts.*',
+        knex.raw('users.username as "author_username"')
+      )
       .first();
     
     if (!post) {
@@ -119,9 +128,12 @@ router.get('/:id', ensureAuthenticated, async (req, res) => {
       .first();
 
     const comments = await knex('comments')
-      .join('users', 'comments.author_id', 'users.id')
+      .leftJoin('users', 'comments.author_id', 'users.id')
       .where('comments.post_id', req.params.id)
-      .select('comments.*', 'users.username')
+      .select(
+        'comments.*',
+        knex.raw('users.username as "author_username"')
+      )
       .orderBy('comments.timestamp', 'asc');
 
     const commentsWithLikes = await Promise.all(comments.map(async (comment) => {
@@ -131,19 +143,22 @@ router.get('/:id', ensureAuthenticated, async (req, res) => {
         .first();
       return {
         ...comment,
-        likes: commentLikes ? commentLikes.count : 0
+        author: { username: comment.author_username || 'Unknown' },
+        likes: commentLikes ? Number(commentLikes.count) : 0
       };
     }));
 
     res.render('post', {
       post: {
         ...post,
+        author: { username: post.author_username || 'Unknown' },
         images: images.map(img => img.image_url),
-        likes: likes ? likes.count : 0
+        likes: likes ? Number(likes.count) : 0
       },
       comments: commentsWithLikes
     });
   } catch (err) {
+    console.error(err);
     res.status(500).send(err.message);
   }
 });
@@ -163,6 +178,7 @@ router.post('/:id/comments', ensureAuthenticated, async (req, res) => {
 
     res.redirect(`/posts/${req.params.id}`);
   } catch (err) {
+    console.error(err);
     res.status(500).send(err.message);
   }
 });
@@ -187,6 +203,7 @@ router.post('/:id/like', ensureAuthenticated, async (req, res) => {
 
     res.redirect(`/posts/${req.params.id}`);
   } catch (err) {
+    console.error(err);
     res.status(500).send(err.message);
   }
 });
@@ -219,6 +236,7 @@ router.post('/comments/:id/like', ensureAuthenticated, async (req, res) => {
 
     res.redirect(`/posts/${comment.post_id}`);
   } catch (err) {
+    console.error(err);
     res.status(500).send(err.message);
   }
 });

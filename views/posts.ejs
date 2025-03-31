@@ -1,15 +1,19 @@
 <h1>Posts</h1>
 <a href="/posts/new">Create New Post</a> | <a href="/profile">My Profile</a>
-<% posts.forEach(post => { %>
-  <div>
-    <h2>Post by <%= post.author.username %></h2>
-    <p><%= post.content %></p>
-    <% if (post.images.length > 0) { %>
-      <% post.images.forEach(image => { %>
-        <img src="<%= image %>" alt="Post image" width="200">
-      <% }) %>
-    <% } %>
-    <p>Likes: <%= post.likes.length %></p>
-    <a href="/posts/<%= post._id %>">View Post</a>
-  </div>
-<% }) %>
+<% if (posts && posts.length > 0) { %>
+  <% posts.forEach(post => { %>
+    <div>
+      <h2>Post by <%= post.author && post.author.username ? post.author.username : 'Unknown' %></h2>
+      <p><%= post.content %></p>
+      <% if (post.images && post.images.length > 0) { %>
+        <% post.images.forEach(image => { %>
+          <img src="<%= image %>" alt="Post image" width="200">
+        <% }) %>
+      <% } %>
+      <p>Likes: <%= post.likes || 0 %></p>
+      <a href="/posts/<%= post.id %>">View Post</a>
+    </div>
+  <% }) %>
+<% } else { %>
+  <p>No posts available.</p>
+<% } %>

@@ -1,6 +1,6 @@
 const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcryptjs');
-const { knex } = require('../app');
+const knex = require('../db'); // 导入 db.js
 
 module.exports = function(passport) {
   passport.use(new LocalStrategy(

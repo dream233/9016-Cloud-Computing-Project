@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const passport = require('passport');
 const bcrypt = require('bcryptjs');
-const { knex } = require('../app');
+const knex = require('../db'); // 导入 db.js
 const { v4: uuidv4 } = require('uuid');
 
 router.get('/register', (req, res) => {
@@ -39,9 +39,11 @@ router.post('/login', passport.authenticate('local', {
   failureFlash: true
 }));
 
-router.get('/logout', (req, res) => {
-  req.logout();
-  res.redirect('/login');
+router.get('/logout', (req, res, next) => {
+  req.logout((err) => { // 显式传递回调函数
+    if (err) return next(err);
+    res.redirect('/login');
+  });
 });
 
 module.exports = router;
