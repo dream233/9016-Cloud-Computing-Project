@@ -1,73 +1,36 @@
-require('dotenv').config();
-
 const express = require('express');
-const mongoose = require('mongoose');
-const passport = require('passport');
-const session = require('express-session');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-
+const knex = require('knex')({
+  client: 'mysql2',
+  connection: {
+    host: 'your-cloud-sql-ip',
+    user: 'root',
+    password: 'your-password',
+    database: 'social_platform'
+  }
+});
 const app = express();
 
-// 设置视图引擎
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-
-// 会话中间件
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.urlencoded({ extended: true }));
 app.use(session({
-  //secret: 'your_secret_key',
-  secret: process.env.SESSION_SECRET,
+  secret: 'your_secret_key',
   resave: false,
   saveUninitialized: false
 }));
-
-// Passport 中间件
 app.use(passport.initialize());
 app.use(passport.session());
-
-// 静态文件
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.urlencoded({ extended: true }));
-
-// 本地连接 MongoDB
-// mongoose.connect('mongodb://localhost:27017/social_platform');
-
-mongoose.connect(process.env.MONGO_URI);
-
-
-// Passport 配置
-require('./config/passport')(passport);
-
-// Multer 设置（图片上传）
-const storage = multer.diskStorage({
-  destination: function(req, file, cb) {
-    cb(null, 'public/uploads/');
-  },
-  filename: function(req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
-});
-const upload = multer({ storage: storage });
-
-// 确保 uploads 目录存在
-const uploadDir = path.join(__dirname, 'public', 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
 
 // 路由
 const authRoutes = require('./routes/auth');
 const postRoutes = require('./routes/posts');
 const profileRoutes = require('./routes/profile');
 
-
 app.use('/', authRoutes);
 app.use('/posts', postRoutes);
 app.use('/profile', profileRoutes);
 
-
-// 根路由
 app.get('/', (req, res) => {
   if (req.isAuthenticated()) {
     res.redirect('/posts');
@@ -76,8 +39,9 @@ app.get('/', (req, res) => {
   }
 });
 
-// 启动服务器
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+module.exports = { app, knex };
