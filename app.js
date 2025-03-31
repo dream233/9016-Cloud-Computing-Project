@@ -61,8 +61,8 @@ app.listen(PORT, () => {
 
 // 错误处理
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send('Something broke!');
+  console.error('Global error:', err.stack);
+  res.status(500).render('error', { error: err.message || 'Something broke!' });
 });
 
 module.exports = { app, knex };

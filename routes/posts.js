@@ -47,7 +47,8 @@ router.get('/', ensureAuthenticated, async (req, res, next) => {
     
     res.render('posts', { posts: postsWithImagesAndLikes });
   } catch (err) {
-    next(err); // 传递错误给 Express 错误处理中间件
+    console.error('Error fetching posts:', err);
+    next(err);
   }
 });
 
@@ -78,7 +79,10 @@ router.post('/', ensureAuthenticated, upload.array('images', 5), async (req, res
         });
 
         await new Promise((resolve, reject) => {
-          blobStream.on('error', (err) => reject(err));
+          blobStream.on('error', (err) => {
+            console.error('GCS upload error:', err);
+            reject(err);
+          });
           blobStream.on('finish', () => resolve());
           blobStream.end(file.buffer);
         });
@@ -92,7 +96,9 @@ router.post('/', ensureAuthenticated, upload.array('images', 5), async (req, res
 
     res.redirect('/posts');
   } catch (err) {
-    next(err);
+    console.error('Error creating post:', err);
+    req.flash('error', 'Failed to create post: ' + err.message);
+    res.redirect('/posts/new');
   }
 });
 
@@ -155,6 +161,7 @@ router.get('/:id', ensureAuthenticated, async (req, res, next) => {
       comments: commentsWithLikes
     });
   } catch (err) {
+    console.error('Error fetching post:', err);
     next(err);
   }
 });
@@ -174,6 +181,7 @@ router.post('/:id/comments', ensureAuthenticated, async (req, res, next) => {
 
     res.redirect(`/posts/${req.params.id}`);
   } catch (err) {
+    console.error('Error adding comment:', err);
     next(err);
   }
 });
@@ -198,6 +206,7 @@ router.post('/:id/like', ensureAuthenticated, async (req, res, next) => {
 
     res.redirect(`/posts/${req.params.id}`);
   } catch (err) {
+    console.error('Error liking post:', err);
     next(err);
   }
 });
@@ -230,6 +239,7 @@ router.post('/comments/:id/like', ensureAuthenticated, async (req, res, next) =>
 
     res.redirect(`/posts/${comment.post_id}`);
   } catch (err) {
+    console.error('Error liking comment:', err);
     next(err);
   }
 });
