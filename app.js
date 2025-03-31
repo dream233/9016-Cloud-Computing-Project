@@ -2,14 +2,13 @@ const express = require('express');
 const path = require('path');
 const session = require('express-session');
 const passport = require('passport');
-const flash = require('connect-flash'); // 添加 connect-flash
-const knex = require('./db'); // 导入 db.js
+const flash = require('connect-flash');
+const knex = require('./db');
 const { Storage } = require('@google-cloud/storage');
+
 const storage = new Storage({
-  keyFilename: 'D:/BaiduSyncdisk/western文件/25Winter/ece9016/prismatic-fact-455403-c4-9e843b43904b.json'
+  keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS || '/app/credentials/prismatic-fact-455403-c4-9e843b43904b.json'
 });
-
-
 
 const app = express();
 
@@ -33,31 +32,90 @@ app.use(flash());
 app.use(passport.initialize());
 app.use(passport.session());
 
-// 加载 passport 配置（确保在 app 配置完成后）
+// 加载 passport 配置
 require('./config/passport')(passport);
 
-// 路由
-const authRoutes = require('./routes/auth');
-const postRoutes = require('./routes/posts');
-const profileRoutes = require('./routes/profile');
+// 初始化数据库表
+async function initializeDatabase() {
+  try {
+    // 测试数据库连接
+    await knex.raw('SELECT 1');
+    console.log('Connected to MySQL database');
 
-app.use('/', authRoutes);
-app.use('/posts', postRoutes);
-app.use('/profile', profileRoutes);
+    // 创建 users 表
+    await knex.schema.createTableIfNotExists('users', (table) => {
+      table.string('id', 255).primary();
+      table.string('username', 255).unique().notNullable();
+      table.string('email', 255).unique().notNullable();
+      table.string('password', 255).notNullable();
+      table.string('profilePicture', 255);
+      table.string('backgroundPicture', 255);
+    });
 
-// 根路由
-app.get('/', (req, res) => {
-  if (req.isAuthenticated()) {
-    res.redirect('/posts');
-  } else {
-    res.redirect('/login');
+    // 创建 posts 表
+    await knex.schema.createTableIfNotExists('posts', (table) => {
+      table.string('id', 255).primary();
+      table.string('author_id', 255).references('id').inTable('users');
+      table.text('content').notNullable();
+      table.dateTime('timestamp').defaultTo(knex.fn.now());
+    });
+
+    // 创建 post_images 表
+    await knex.schema.createTableIfNotExists('post_images', (table) => {
+      table.string('id', 255).primary();
+      table.string('post_id', 255).references('id').inTable('posts');
+      table.string('image_url', 255);
+    });
+
+    // 创建 comments 表
+    await knex.schema.createTableIfNotExists('comments', (table) => {
+      table.string('id', 255).primary();
+      table.string('post_id', 255).references('id').inTable('posts');
+      table.string('author_id', 255).references('id').inTable('users');
+      table.text('content').notNullable();
+      table.dateTime('timestamp').defaultTo(knex.fn.now());
+    });
+
+    // 创建 likes 表
+    await knex.schema.createTableIfNotExists('likes', (table) => {
+      table.string('id', 255).primary();
+      table.string('user_id', 255).references('id').inTable('users');
+      table.string('post_id', 255).references('id').inTable('posts');
+      table.string('comment_id', 255).references('id').inTable('comments');
+    });
+
+    console.log('Database tables initialized');
+  } catch (err) {
+    console.error('Failed to initialize database:', err);
+    process.exit(1);
   }
-});
+}
 
-// 启动服务器
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// 在服务器启动前初始化数据库
+initializeDatabase().then(() => {
+  // 路由
+  const authRoutes = require('./routes/auth');
+  const postRoutes = require('./routes/posts');
+  const profileRoutes = require('./routes/profile');
+
+  app.use('/', authRoutes);
+  app.use('/posts', postRoutes);
+  app.use('/profile', profileRoutes);
+
+  // 根路由
+  app.get('/', (req, res) => {
+    if (req.isAuthenticated()) {
+      res.redirect('/posts');
+    } else {
+      res.redirect('/login');
+    }
+  });
+
+  // 启动服务器
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
 });
 
 // 错误处理
