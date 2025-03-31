@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-server
+  namespace: prod
+spec:
+  replicas: 2  # 两个 Web Server Pod
+  selector:
+    matchLabels:
+      app: web-server
+  template:
+    metadata:
+      labels:
+        app: web-server
+    spec:
+      containers:
+      - name: web-server
+        image: gcr.io/prismatic-fact-455403-c4/web-server:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: DB_HOST
+          value: "database-svc.prod.svc.cluster.local"
+        - name: DB_USER
+          value: "mysqluser"
+        - name: DB_PASSWORD
+          value: "mysqlpassword"
+        - name: DB_NAME
+          value: "social_platform_db"
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "/app/credentials/prismatic-fact-455403-c4-9e843b43904b.json"
+        volumeMounts:
+        - name: credentials
+          mountPath: "/app/credentials"
+          readOnly: true
+      volumes:
+      - name: credentials
+        secret:
+          secretName: gcp-credentials
+      affinity:
+        podAntiAffinity:  # 确保两个 Web Server Pod 运行在不同节点
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: web-server
+            topologyKey: "kubernetes.io/hostname"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-server-svc
+  namespace: prod
+spec:
+  selector:
+    app: web-server
+  ports:
+  - protocol: TCP
+    port: 3000
+    targetPort: 3000
+  type: LoadBalancer  # 使用 Load Balancer 分发流量
