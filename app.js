@@ -53,9 +53,12 @@ if (!fs.existsSync(uploadDir)) {
 // 路由
 const authRoutes = require('./routes/auth');
 const postRoutes = require('./routes/posts');
+const profileRoutes = require('./routes/profile');
+
 
 app.use('/', authRoutes);
 app.use('/posts', postRoutes);
+app.use('/profile', profileRoutes);
 
 
 // 根路由

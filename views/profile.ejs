@@ -1,0 +1,19 @@
+<h1>Profile Management</h1>
+<p>Username: <%= user.username %></p>
+
+<% if (user.backgroundPicture) { %>
+  <img src="<%= user.backgroundPicture %>" alt="Background Picture" style="max-width: 100%;">
+<% } else { %>
+  <p>No background picture set.</p>
+<% } %>
+
+<h2>Upload Background Picture</h2>
+<% if (error) { %>
+  <p style="color: red;"><%= error %></p>
+<% } %>
+<form action="/profile/background" method="POST" enctype="multipart/form-data">
+  <input type="file" name="backgroundPicture" required>
+  <button type="submit">Upload</button>
+</form>
+
+<a href="/posts">Back to Posts</a>

@@ -5,7 +5,8 @@ const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  profilePicture: { type: String }
+  profilePicture: { type: String },
+  backgroundPicture: { type: String } // 新字段
 });
 
 // 密码哈希
