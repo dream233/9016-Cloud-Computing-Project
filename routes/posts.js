@@ -19,7 +19,7 @@ const upload = multer({
 });
 
 // 获取所有帖子
-router.get('/', ensureAuthenticated, async (req, res) => {
+router.get('/', ensureAuthenticated, async (req, res, next) => {
   try {
     const posts = await knex('posts')
       .leftJoin('users', 'posts.author_id', 'users.id')
@@ -47,8 +47,7 @@ router.get('/', ensureAuthenticated, async (req, res) => {
     
     res.render('posts', { posts: postsWithImagesAndLikes });
   } catch (err) {
-    console.error(err);
-    res.status(500).send(err.message);
+    next(err); // 传递错误给 Express 错误处理中间件
   }
 });
 
@@ -58,7 +57,7 @@ router.get('/new', ensureAuthenticated, (req, res) => {
 });
 
 // 创建新帖子
-router.post('/', ensureAuthenticated, upload.array('images', 5), async (req, res) => {
+router.post('/', ensureAuthenticated, upload.array('images', 5), async (req, res, next) => {
   try {
     const { content } = req.body;
     const postId = uuidv4();
@@ -93,13 +92,12 @@ router.post('/', ensureAuthenticated, upload.array('images', 5), async (req, res
 
     res.redirect('/posts');
   } catch (err) {
-    console.error(err);
-    res.status(500).send(err.message);
+    next(err);
   }
 });
 
 // 获取单个帖子
-router.get('/:id', ensureAuthenticated, async (req, res) => {
+router.get('/:id', ensureAuthenticated, async (req, res, next) => {
   if (!req.params.id.match(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)) {
     return res.status(400).send('Invalid post ID');
   }
@@ -157,13 +155,12 @@ router.get('/:id', ensureAuthenticated, async (req, res) => {
       comments: commentsWithLikes
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).send(err.message);
+    next(err);
   }
 });
 
 // 添加评论
-router.post('/:id/comments', ensureAuthenticated, async (req, res) => {
+router.post('/:id/comments', ensureAuthenticated, async (req, res, next) => {
   try {
     const { content } = req.body;
     const commentId = uuidv4();
@@ -177,13 +174,12 @@ router.post('/:id/comments', ensureAuthenticated, async (req, res) => {
 
     res.redirect(`/posts/${req.params.id}`);
   } catch (err) {
-    console.error(err);
-    res.status(500).send(err.message);
+    next(err);
   }
 });
 
 // 点赞帖子
-router.post('/:id/like', ensureAuthenticated, async (req, res) => {
+router.post('/:id/like', ensureAuthenticated, async (req, res, next) => {
   try {
     const existingLike = await knex('likes')
       .where({ user_id: req.user.id, post_id: req.params.id })
@@ -202,13 +198,12 @@ router.post('/:id/like', ensureAuthenticated, async (req, res) => {
 
     res.redirect(`/posts/${req.params.id}`);
   } catch (err) {
-    console.error(err);
-    res.status(500).send(err.message);
+    next(err);
   }
 });
 
 // 点赞评论
-router.post('/comments/:id/like', ensureAuthenticated, async (req, res) => {
+router.post('/comments/:id/like', ensureAuthenticated, async (req, res, next) => {
   try {
     const comment = await knex('comments')
       .where({ id: req.params.id })
@@ -235,8 +230,7 @@ router.post('/comments/:id/like', ensureAuthenticated, async (req, res) => {
 
     res.redirect(`/posts/${comment.post_id}`);
   } catch (err) {
-    console.error(err);
-    res.status(500).send(err.message);
+    next(err);
   }
 });
 
