@@ -43,7 +43,8 @@ console.log('Express app created');
   app.use(session({
     secret: process.env.SESSION_SECRET || 'your_secret_key',
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 } // 1 天有效期
   }));
   console.log('Session middleware configured');
 
@@ -82,6 +83,7 @@ console.log('Express app created');
 
   // 根路由
   app.get('/', (req, res) => {
+    console.log('Root route accessed, isAuthenticated:', req.isAuthenticated());
     if (req.isAuthenticated()) {
       res.redirect('/posts');
     } else {
