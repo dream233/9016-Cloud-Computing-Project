@@ -244,4 +244,14 @@ router.post('/comments/:id/like', ensureAuthenticated, async (req, res, next) =>
   }
 });
 
+router.get('/test-gcs', async (req, res) => {
+  try {
+    const [buckets] = await storage.getBuckets();
+    res.send('GCS authentication successful: ' + buckets.map(b => b.name).join(', '));
+  } catch (err) {
+    console.error('GCS test error:', err);
+    res.status(500).send('GCS authentication failed: ' + err.message);
+  }
+});
+
 module.exports = router;
