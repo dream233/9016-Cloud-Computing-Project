@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: social-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: social-platform
+  template:
+    metadata:
+      labels:
+        app: social-platform
+    spec:
+      containers:
+      - name: social-platform
+        image: gcr.io/prismatic-fact-455403-c4/social-platform:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: DB_HOST
+          value: "34.29.132.73" # 替换为实际公共IP
+        - name: DB_USER
+          value: "root"
+        - name: DB_PASSWORD
+          value: "your-password"
+        - name: DB_NAME
+          value: "social_platform"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: social-platform-service
+spec:
+  selector:
+    app: social-platform
+  ports:
+  - port: 80
+    targetPort: 3000
+  type: LoadBalancer
