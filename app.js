@@ -42,64 +42,70 @@ async function initializeDatabase() {
     await knex.raw('SELECT 1');
     console.log('Connected to MySQL database');
 
-    // 检查并创建 users 表
-    if (await knex.schema.hasTable('users')) {
-      await knex.schema.dropTable('users'); // 删除现有表以避免约束冲突
+    // 创建一个标志表，用于检查是否已初始化
+    if (!(await knex.schema.hasTable('schema_version'))) {
+      await knex.schema.createTable('schema_version', (table) => {
+        table.increments('id').primary();
+        table.integer('version').notNullable();
+      });
+      await knex('schema_version').insert({ version: 0 });
     }
-    await knex.schema.createTable('users', (table) => {
-      table.string('id', 255).primary();
-      table.string('username', 255).unique().notNullable();
-      table.string('email', 255).unique().notNullable();
-      table.string('password', 255).notNullable();
-      table.string('profilePicture', 255);
-      table.string('backgroundPicture', 255);
-    });
 
-    // 检查并创建 posts 表
-    if (await knex.schema.hasTable('posts')) {
-      await knex.schema.dropTable('posts');
+    const currentVersion = (await knex('schema_version').select('version').first()).version;
+
+    // 如果版本为 0，表示需要初始化表
+    if (currentVersion === 0) {
+      // 创建 users 表
+      await knex.schema.createTable('users', (table) => {
+        table.string('id', 255).primary();
+        table.string('username', 255).notNullable();
+        table.string('email', 255).notNullable();
+        table.string('password', 255).notNullable();
+        table.string('profilePicture', 255);
+        table.string('backgroundPicture', 255);
+        table.unique('username', { indexName: 'users_username_unique' });
+        table.unique('email', { indexName: 'users_email_unique' });
+      });
+
+      // 创建 posts 表
+      await knex.schema.createTable('posts', (table) => {
+        table.string('id', 255).primary();
+        table.string('author_id', 255).references('id').inTable('users').onDelete('CASCADE');
+        table.text('content').notNullable();
+        table.dateTime('timestamp').defaultTo(knex.fn.now());
+      });
+
+      // 创建 post_images 表
+      await knex.schema.createTable('post_images', (table) => {
+        table.string('id', 255).primary();
+        table.string('post_id', 255).references('id').inTable('posts').onDelete('CASCADE');
+        table.string('image_url', 255);
+      });
+
+      // 创建 comments 表
+      await knex.schema.createTable('comments', (table) => {
+        table.string('id', 255).primary();
+        table.string('post_id', 255).references('id').inTable('posts').onDelete('CASCADE');
+        table.string('author_id', 255).references('id').inTable('users').onDelete('CASCADE');
+        table.text('content').notNullable();
+        table.dateTime('timestamp').defaultTo(knex.fn.now());
+      });
+
+      // 创建 likes 表
+      await knex.schema.createTable('likes', (table) => {
+        table.string('id', 255).primary();
+        table.string('user_id', 255).references('id').inTable('users').onDelete('CASCADE');
+        table.string('post_id', 255).references('id').inTable('posts').onDelete('CASCADE');
+        table.string('comment_id', 255).references('id').inTable('comments').onDelete('CASCADE');
+      });
+
+      // 更新版本号
+      await knex('schema_version').update({ version: 1 });
+
+      console.log('Database tables initialized');
+    } else {
+      console.log('Database already initialized, skipping table creation');
     }
-    await knex.schema.createTable('posts', (table) => {
-      table.string('id', 255).primary();
-      table.string('author_id', 255).references('id').inTable('users').onDelete('CASCADE');
-      table.text('content').notNullable();
-      table.dateTime('timestamp').defaultTo(knex.fn.now());
-    });
-
-    // 检查并创建 post_images 表
-    if (await knex.schema.hasTable('post_images')) {
-      await knex.schema.dropTable('post_images');
-    }
-    await knex.schema.createTable('post_images', (table) => {
-      table.string('id', 255).primary();
-      table.string('post_id', 255).references('id').inTable('posts').onDelete('CASCADE');
-      table.string('image_url', 255);
-    });
-
-    // 检查并创建 comments 表
-    if (await knex.schema.hasTable('comments')) {
-      await knex.schema.dropTable('comments');
-    }
-    await knex.schema.createTable('comments', (table) => {
-      table.string('id', 255).primary();
-      table.string('post_id', 255).references('id').inTable('posts').onDelete('CASCADE');
-      table.string('author_id', 255).references('id').inTable('users').onDelete('CASCADE');
-      table.text('content').notNullable();
-      table.dateTime('timestamp').defaultTo(knex.fn.now());
-    });
-
-    // 检查并创建 likes 表
-    if (await knex.schema.hasTable('likes')) {
-      await knex.schema.dropTable('likes');
-    }
-    await knex.schema.createTable('likes', (table) => {
-      table.string('id', 255).primary();
-      table.string('user_id', 255).references('id').inTable('users').onDelete('CASCADE');
-      table.string('post_id', 255).references('id').inTable('posts').onDelete('CASCADE');
-      table.string('comment_id', 255).references('id').inTable('comments').onDelete('CASCADE');
-    });
-
-    console.log('Database tables initialized');
   } catch (err) {
     console.error('Failed to initialize database:', err);
     process.exit(1);
