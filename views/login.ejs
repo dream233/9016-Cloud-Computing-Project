@@ -1,7 +1,24 @@
-<h1>Login</h1>
-<form action="/login" method="POST">
-  <input type="email" name="email" placeholder="Email" required>
-  <input type="password" name="password" placeholder="Password" required>
-  <button type="submit">Login</button>
-</form>
-<p>Don't have an account? <a href="/register">Register</a></p>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login</title>
+</head>
+<body>
+  <h1>Login</h1>
+  <% if (messages.error) { %>
+    <p style="color: red;"><%= messages.error %></p>
+  <% } %>
+  <form action="/login" method="POST">
+    <div>
+      <label for="email">Email:</label>
+      <input type="email" id="email" name="email" required>
+    </div>
+    <div>
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" required>
+    </div>
+    <button type="submit">Login</button>
+  </form>
+  <p>Don't have an account? <a href="/register">Register</a></p>
+</body>
+</html>
