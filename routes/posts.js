@@ -8,7 +8,7 @@ const { Storage } = require('@google-cloud/storage');
 
 // 配置 Cloud Storage
 const storage = new Storage({
-  keyFilename: 'D:/BaiduSyncdisk/western文件/25Winter/ece9016/prismatic-fact-455403-c4-9e843b43904b.json'
+  keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS || '/app/credentials/prismatic-fact-455403-c4-9e843b43904b.json'
 });
 const bucket = storage.bucket('social_platform_image');
 
@@ -76,7 +76,6 @@ router.post('/', ensureAuthenticated, upload.array('images', 5), async (req, res
         const blobStream = blob.createWriteStream({
           resumable: false,
           metadata: { contentType: file.mimetype }
-          // 移除 predefinedAcl，因为统一存储桶级访问忽略 ACL
         });
 
         await new Promise((resolve, reject) => {
