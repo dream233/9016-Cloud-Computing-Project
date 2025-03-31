@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: social-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: social-app
+  template:
+    metadata:
+      labels:
+        app: social-app
+    spec:
+      containers:
+      - name: web
+        image: us-central1-docker.pkg.dev/YOUR_PROJECT_ID/social-app-repo/social-app
+        ports:
+        - containerPort: 3000
+        env:
+        - name: MONGO_URI
+          value: "mongodb://mongo:27017/social_platform"
+        - name: SESSION_SECRET
+          value: "dev-secret-key"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+      - name: mongo
+        image: mongo:5
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: mongo-storage
+          mountPath: /data/db
+      volumes:
+      - name: mongo-storage
+        emptyDir: {}

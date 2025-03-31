@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const mongoose = require('mongoose');
 const passport = require('passport');
@@ -14,7 +16,8 @@ app.set('views', path.join(__dirname, 'views'));
 
 // 会话中间件
 app.use(session({
-  secret: 'your_secret_key',
+  //secret: 'your_secret_key',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false
 }));
@@ -27,8 +30,11 @@ app.use(passport.session());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 
-// 连接 MongoDB
-mongoose.connect('mongodb://localhost:27017/social_platform');
+// 本地连接 MongoDB
+// mongoose.connect('mongodb://localhost:27017/social_platform');
+
+mongoose.connect(process.env.MONGO_URI);
+
 
 // Passport 配置
 require('./config/passport')(passport);
@@ -47,7 +53,7 @@ const upload = multer({ storage: storage });
 // 确保 uploads 目录存在
 const uploadDir = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
+  fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 // 路由
