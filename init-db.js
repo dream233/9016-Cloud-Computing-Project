@@ -18,10 +18,10 @@ async function initializeDatabase() {
       table.unique('email', { indexName: 'users_email_unique' });
     });
 
-    // 创建 posts 表
+    // 创建 posts 表（移除 author_id 外键约束）
     await knex.schema.createTable('posts', (table) => {
       table.string('id', 255).primary();
-      table.string('author_id', 255).references('id').inTable('users').onDelete('CASCADE');
+      table.string('author_id', 255); // 不再关联 users 表
       table.text('content').notNullable();
       table.dateTime('timestamp').defaultTo(knex.fn.now());
     });
@@ -33,19 +33,19 @@ async function initializeDatabase() {
       table.string('image_url', 255);
     });
 
-    // 创建 comments 表
+    // 创建 comments 表（移除 author_id 外键约束）
     await knex.schema.createTable('comments', (table) => {
       table.string('id', 255).primary();
       table.string('post_id', 255).references('id').inTable('posts').onDelete('CASCADE');
-      table.string('author_id', 255).references('id').inTable('users').onDelete('CASCADE');
+      table.string('author_id', 255); // 不再关联 users 表
       table.text('content').notNullable();
       table.dateTime('timestamp').defaultTo(knex.fn.now());
     });
 
-    // 创建 likes 表
+    // 创建 likes 表（移除 user_id 外键约束）
     await knex.schema.createTable('likes', (table) => {
       table.string('id', 255).primary();
-      table.string('user_id', 255).references('id').inTable('users').onDelete('CASCADE');
+      table.string('user_id', 255); // 不再关联 users 表
       table.string('post_id', 255).references('id').inTable('posts').onDelete('CASCADE');
       table.string('comment_id', 255).references('id').inTable('comments').onDelete('CASCADE');
     });
