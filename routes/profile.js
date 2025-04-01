@@ -1,32 +1,27 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
-const User = require('../models/User');
-const { ensureAuthenticated } = require('../middleware/auth');
+const knex = require('../db');
+const cookieParser = require('cookie-parser');
 
-const storage = multer.diskStorage({
-  destination: 'public/uploads/',
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
-});
-const upload = multer({ storage: storage });
+router.use(cookieParser());
 
-// 显示Profile页面
-router.get('/', ensureAuthenticated, (req, res) => {
-    res.render('profile', { user: req.user, error: null });
-  });
-
-// 处理背景图片上传
-router.post('/background', ensureAuthenticated, upload.single('backgroundPicture'), async (req, res) => {
+router.get('/', async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id);
-    user.backgroundPicture = '/uploads/' + req.file.filename;
-    await user.save();
-    res.redirect('/profile');
+    console.log('GET /profile - Fetching profile for username:', req.cookies.username);
+    const username = req.cookies.username || 'anonymous';
+    
+    // 根据用户名查询用户（假设 users 表有 username 字段）
+    const user = await knex('users').where({ username }).first();
+    
+    if (!user) {
+      console.log('User not found for username:', username);
+      return res.render('profile', { user: { username: 'anonymous' }, error: 'User not found' });
+    }
+
+    res.render('profile', { user, error: null });
   } catch (err) {
-    res.render('profile', { user: req.user, error: 'Failed to upload background picture' });
+    console.error('Error fetching profile:', err);
+    next(err); // 使用全局错误处理
   }
 });
 
