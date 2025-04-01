@@ -163,13 +163,28 @@ router.post('/:id/like', async (req, res, next) => {
 router.post('/posts/comments/:id/like', async (req, res, next) => {
   try {
     const comment = await knex('comments').where({ id: req.params.id }).first();
-    if (!comment) return res.status(404).send('Comment not found');
+    if (!comment) {
+      console.log(`Comment ${req.params.id} not found`);
+      return res.status(404).send('Comment not found');
+    }
 
-    const existingLike = await knex('likes').where({ comment_id: req.params.id }).first();
-    if (existingLike) return res.redirect(`/posts/${comment.post_id}`);
+    // 可选：检查当前用户是否已点赞
+    const userId = req.cookies.username || 'anonymous';
+    const existingLike = await knex('likes')
+      .where({ comment_id: req.params.id, user_id: userId })
+      .first();
+    if (existingLike) {
+      console.log(`User ${userId} already liked comment ${req.params.id}`);
+      return res.redirect(`/posts/${comment.post_id}`);
+    }
 
     const likeId = uuidv4();
-    await knex('likes').insert({ id: likeId, comment_id: req.params.id });
+    await knex('likes').insert({
+      id: likeId,
+      comment_id: req.params.id,
+      user_id: userId // 记录点赞用户
+    });
+    console.log(`Comment ${req.params.id} liked by ${userId}`);
     res.redirect(`/posts/${comment.post_id}`);
   } catch (err) {
     console.error('Error liking comment:', err);
