@@ -28,18 +28,19 @@ module.exports = function(passport) {
   ));
 
   passport.serializeUser((user, done) => {
-    console.log('Serializing user:', user.id);
+    console.log('Serializing user with ID:', user.id);
     done(null, user.id);
   });
 
   passport.deserializeUser(async (id, done) => {
     try {
-      console.log('Deserializing user:', id);
+      console.log('Deserializing user with ID:', id);
       const user = await knex('users').where({ id }).first();
       if (!user) {
         console.log('User not found during deserialization:', id);
         return done(null, false);
       }
+      console.log('Deserialized user:', user.email);
       done(null, user);
     } catch (err) {
       console.error('Error during deserialization:', err);

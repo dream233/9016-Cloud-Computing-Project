@@ -39,12 +39,15 @@ console.log('Express app created');
   app.use(express.urlencoded({ extended: true }));
   console.log('View engine and middleware configured');
 
-  // 配置 session
+  // 配置 session，使用硬编码的 secret
   app.use(session({
-    secret: process.env.SESSION_SECRET || 'your_secret_key',
+    secret: 'my_hardcoded_secret_key', // 临时硬编码，生产环境建议改为环境变量
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 } // 1 天有效期
+    cookie: { 
+      secure: false, // 本地开发用 false，生产环境 HTTPS 用 true
+      maxAge: 24 * 60 * 60 * 1000 // 1 天有效期
+    }
   }));
   console.log('Session middleware configured');
 

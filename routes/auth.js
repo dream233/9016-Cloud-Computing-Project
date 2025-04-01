@@ -43,13 +43,10 @@ router.get('/login', (req, res) => {
   res.render('login', { error: req.flash('error') });
 });
 
+// 修改登录路由
 router.post('/login', (req, res, next) => {
   console.log('Login attempt with body:', req.body);
-  passport.authenticate('local', {
-    successRedirect: '/posts',
-    failureRedirect: '/login',
-    failureFlash: true
-  }, (err, user, info) => {
+  passport.authenticate('local', (err, user, info) => {
     if (err) {
       console.error('Authentication error:', err);
       return next(err);
@@ -59,13 +56,22 @@ router.post('/login', (req, res, next) => {
       req.flash('error', info.message);
       return res.redirect('/login');
     }
+    // 手动登录并保存会话
     req.logIn(user, (err) => {
       if (err) {
         console.error('Login error:', err);
         return next(err);
       }
-      console.log('User logged in successfully:', user.email);
-      return res.redirect('/posts');
+      console.log('User logged in:', user.email);
+      // 确保会话保存后再重定向
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return next(err);
+        }
+        console.log('Session saved:', req.session);
+        res.redirect('/posts');
+      });
     });
   })(req, res, next);
 });
