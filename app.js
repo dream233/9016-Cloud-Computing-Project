@@ -1,6 +1,5 @@
 const express = require('express');
 const path = require('path');
-const flash = require('connect-flash');
 const knex = require('./db');
 const { Storage } = require('@google-cloud/storage');
 
@@ -37,10 +36,6 @@ console.log('Express app created');
   app.use(express.urlencoded({ extended: true }));
   console.log('View engine and middleware configured');
 
-  // 配置 flash（可选，如果你仍需要错误提示）
-  app.use(flash());
-  console.log('Flash middleware configured');
-
   // 根路由：直接跳转到 /login
   app.get('/', (req, res) => {
     console.log('Root route accessed, redirecting to /login');
@@ -53,9 +48,9 @@ console.log('Express app created');
     const postRoutes = require('./routes/posts');
     const profileRoutes = require('./routes/profile');
 
-    app.use('/', authRoutes);       // 挂载 auth 路由
-    app.use('/posts', postRoutes);  // 挂载 posts 路由
-    app.use('/profile', profileRoutes); // 挂载 profile 路由
+    app.use('/', authRoutes);
+    app.use('/posts', postRoutes);
+    app.use('/profile', profileRoutes);
     console.log('Routes loaded');
   } catch (err) {
     console.error('Failed to load routes:', err);

@@ -53,7 +53,7 @@ router.get('/', async (req, res, next) => {
 
 // 创建帖子页面
 router.get('/new', (req, res) => {
-  res.render('new_post');
+  res.render('new_post', { error: null }); // 默认无错误
 });
 
 // 创建新帖子
@@ -61,8 +61,7 @@ router.post('/', upload.array('images', 5), async (req, res, next) => {
   try {
     const { content } = req.body;
     const postId = uuidv4();
-    // 这里假设匿名用户，author_id 使用一个默认值或留空
-    const authorId = 'anonymous'; // 可根据需求修改
+    const authorId = 'anonymous'; // 匿名用户
     
     await knex('posts').insert({
       id: postId,
@@ -98,8 +97,7 @@ router.post('/', upload.array('images', 5), async (req, res, next) => {
     res.redirect('/posts');
   } catch (err) {
     console.error('Error creating post:', err);
-    req.flash('error', 'Failed to create post: ' + err.message);
-    res.redirect('/posts/new');
+    res.render('new_post', { error: 'Failed to create post: ' + err.message });
   }
 });
 
@@ -172,8 +170,7 @@ router.post('/:id/comments', async (req, res, next) => {
   try {
     const { content } = req.body;
     const commentId = uuidv4();
-    // 匿名用户，author_id 使用默认值
-    const authorId = 'anonymous'; // 可根据需求修改
+    const authorId = 'anonymous';
     
     await knex('comments').insert({
       id: commentId,
@@ -192,9 +189,8 @@ router.post('/:id/comments', async (req, res, next) => {
 // 点赞帖子
 router.post('/:id/like', async (req, res, next) => {
   try {
-    // 移除用户检查，允许匿名点赞
     const existingLike = await knex('likes')
-      .where({ post_id: req.params.id }) // 可选：添加某种唯一标识，如 IP
+      .where({ post_id: req.params.id })
       .first();
     
     if (existingLike) {
@@ -205,7 +201,6 @@ router.post('/:id/like', async (req, res, next) => {
     await knex('likes').insert({
       id: likeId,
       post_id: req.params.id
-      // user_id 移除，因为不保存用户信息
     });
 
     res.redirect(`/posts/${req.params.id}`);
@@ -226,9 +221,8 @@ router.post('/comments/:id/like', async (req, res, next) => {
       return res.status(404).send('Comment not found');
     }
 
-    // 移除用户检查，允许匿名点赞
     const existingLike = await knex('likes')
-      .where({ comment_id: req.params.id }) // 可选：添加某种唯一标识
+      .where({ comment_id: req.params.id })
       .first();
     
     if (existingLike) {
@@ -239,7 +233,6 @@ router.post('/comments/:id/like', async (req, res, next) => {
     await knex('likes').insert({
       id: likeId,
       comment_id: req.params.id
-      // user_id 移除
     });
 
     res.redirect(`/posts/${comment.post_id}`);
