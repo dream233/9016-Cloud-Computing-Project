@@ -199,7 +199,7 @@
               <small>Posted: <%= new Date(comment.timestamp).toLocaleString() %></small><br>
               <small>Likes: <%= comment.likes || 0 %></small>
 
-              <form action="/posts/comments/<%= comment.id %>/like" method="POST">
+              <form action="/posts/posts/comments/<%= comment.id %>/like" method="POST">
                 <button type="submit">Like Comment</button>
               </form>
             </div>
