@@ -3,16 +3,15 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const knex = require('../db');
 const { v4: uuidv4 } = require('uuid');
+const cookieParser = require('cookie-parser'); // 新增依赖
 
-console.log('Auth routes module loaded');
+router.use(cookieParser()); // 添加 cookie 支持
 
-// 注册页面
 router.get('/register', (req, res) => {
   console.log('GET /register - Rendering register page');
-  res.render('register', { error: null }); // 默认无错误
+  res.render('register', { error: null });
 });
 
-// 处理注册
 router.post('/register', async (req, res) => {
   const { username, email, password } = req.body;
   try {
@@ -38,13 +37,11 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// 登录页面
 router.get('/login', (req, res) => {
   console.log('GET /login - Rendering login page');
-  res.render('login', { error: null }); // 默认无错误
+  res.render('login', { error: null });
 });
 
-// 处理登录
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   console.log('POST /login - Login attempt with body:', { email });
@@ -60,6 +57,8 @@ router.post('/login', async (req, res) => {
       return res.render('login', { error: 'Password incorrect' });
     }
     console.log('User authenticated successfully:', email);
+    // 设置 cookie 记录用户名
+    res.cookie('username', user.username, { maxAge: 24 * 60 * 60 * 1000, httpOnly: true });
     res.redirect('/posts');
   } catch (err) {
     console.error('Error during login:', err);
@@ -67,9 +66,9 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// 登出
 router.get('/logout', (req, res) => {
   console.log('GET /logout - Logging out user');
+  res.clearCookie('username'); // 清除 cookie
   res.redirect('/login');
 });
 

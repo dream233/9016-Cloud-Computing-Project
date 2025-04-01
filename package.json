@@ -3,6 +3,7 @@
     "@google-cloud/storage": "^7.15.2",
     "bcryptjs": "^3.0.2",
     "connect-session-knex": "^5.0.0",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^16.4.7",
     "ejs": "^3.1.10",
     "express": "^4.21.2",
