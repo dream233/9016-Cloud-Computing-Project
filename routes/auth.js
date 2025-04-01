@@ -5,15 +5,19 @@ const bcrypt = require('bcryptjs');
 const knex = require('../db');
 const { v4: uuidv4 } = require('uuid');
 
+console.log('Auth routes module loaded'); // 确认模块加载
+
+// 注册页面
 router.get('/register', (req, res) => {
-  console.log('Rendering register page');
+  console.log('GET /register - Rendering register page');
   res.render('register', { error: req.flash('error') });
 });
 
+// 处理注册
 router.post('/register', async (req, res) => {
   const { username, email, password } = req.body;
   try {
-    console.log('Registering user:', { username, email });
+    console.log('POST /register - Registering user:', { username, email });
     const existingUser = await knex('users').where({ username }).first();
     if (existingUser) {
       console.log('Username already exists:', username);
@@ -38,14 +42,17 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// 登录页面
 router.get('/login', (req, res) => {
-  console.log('Rendering login page');
+  console.log('GET /login - Rendering login page');
+  console.log('Session:', req.session);
+  console.log('Authenticated:', req.isAuthenticated());
   res.render('login', { error: req.flash('error') });
 });
 
-// 修改登录路由
+// 处理登录
 router.post('/login', (req, res, next) => {
-  console.log('Login attempt with body:', req.body);
+  console.log('POST /login - Login attempt with body:', req.body);
   passport.authenticate('local', (err, user, info) => {
     if (err) {
       console.error('Authentication error:', err);
@@ -56,14 +63,14 @@ router.post('/login', (req, res, next) => {
       req.flash('error', info.message);
       return res.redirect('/login');
     }
-    // 手动登录并保存会话
+    // 手动登录
     req.logIn(user, (err) => {
       if (err) {
         console.error('Login error:', err);
         return next(err);
       }
       console.log('User logged in:', user.email);
-      // 确保会话保存后再重定向
+      // 保存会话后再重定向
       req.session.save((err) => {
         if (err) {
           console.error('Session save error:', err);
@@ -76,14 +83,23 @@ router.post('/login', (req, res, next) => {
   })(req, res, next);
 });
 
+// 登出
 router.get('/logout', (req, res, next) => {
-  console.log('Logging out user');
+  console.log('GET /logout - Logging out user');
   req.logout((err) => {
     if (err) {
       console.error('Logout error:', err);
       return next(err);
     }
-    res.redirect('/login');
+    // 销毁会话，确保登出后认证状态清除
+    req.session.destroy((err) => {
+      if (err) {
+        console.error('Session destroy error:', err);
+        return next(err);
+      }
+      console.log('Session destroyed');
+      res.redirect('/login');
+    });
   });
 });
 

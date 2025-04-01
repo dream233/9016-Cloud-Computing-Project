@@ -32,35 +32,27 @@ console.log('Express app created');
     process.exit(1);
   }
 
-  // 设置视图引擎和静态文件
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
   app.use(express.static(path.join(__dirname, 'public')));
   app.use(express.urlencoded({ extended: true }));
   console.log('View engine and middleware configured');
 
-  // 配置 session，使用硬编码的 secret
   app.use(session({
-    secret: 'my_hardcoded_secret_key', // 临时硬编码，生产环境建议改为环境变量
+    secret: 'my_hardcoded_secret_key',
     resave: false,
     saveUninitialized: false,
-    cookie: { 
-      secure: false, // 本地开发用 false，生产环境 HTTPS 用 true
-      maxAge: 24 * 60 * 60 * 1000 // 1 天有效期
-    }
+    cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
   }));
   console.log('Session middleware configured');
 
-  // 添加 connect-flash
   app.use(flash());
   console.log('Flash middleware configured');
 
-  // 初始化 passport
   app.use(passport.initialize());
   app.use(passport.session());
   console.log('Passport middleware configured');
 
-  // 加载 passport 配置
   try {
     require('./config/passport')(passport);
     console.log('Passport configuration loaded');
@@ -69,7 +61,21 @@ console.log('Express app created');
     process.exit(1);
   }
 
-  // 路由
+  // 根路由
+  app.get('/', (req, res) => {
+    console.log('Root route accessed');
+    console.log('Session:', req.session);
+    console.log('Authenticated:', req.isAuthenticated(), 'User:', req.user);
+    if (req.isAuthenticated()) {
+      console.log('User authenticated, redirecting to /posts');
+      res.redirect('/posts');
+    } else {
+      console.log('User not authenticated, redirecting to /login');
+      res.redirect('/login');
+    }
+  });
+
+  // 其他路由
   try {
     const authRoutes = require('./routes/auth');
     const postRoutes = require('./routes/posts');
@@ -84,34 +90,23 @@ console.log('Express app created');
     process.exit(1);
   }
 
-  // 根路由
-  app.get('/', (req, res) => {
-    console.log('Root route accessed, isAuthenticated:', req.isAuthenticated());
-    if (req.isAuthenticated()) {
-      res.redirect('/posts');
-    } else {
-      res.redirect('/login');
-    }
-  });
-  console.log('Root route configured');
-
-  // 健康检查路由
   app.get('/health', (req, res) => {
     res.status(200).send('Server is healthy');
   });
-  console.log('Health check route configured');
 
-  // 启动服务器
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
 
-  // 错误处理
   app.use((err, req, res, next) => {
     console.error('Global error:', err.stack);
     res.status(500).render('error', { error: err.message || 'Something broke!' });
   });
-})();
 
-module.exports = { app, knex };
+  // 添加 404 处理
+  app.use((req, res) => {
+    console.log('404 - Requested path:', req.path);
+    res.status(404).send('Cannot GET ' + req.path);
+  });
+})();
