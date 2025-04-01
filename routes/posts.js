@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const knex = require('../db');
 const { v4: uuidv4 } = require('uuid');
-const { ensureAuthenticated } = require('../middleware/auth');
 const multer = require('multer');
 const { Storage } = require('@google-cloud/storage');
 
@@ -19,7 +18,7 @@ const upload = multer({
 });
 
 // 获取所有帖子
-router.get('/', ensureAuthenticated, async (req, res, next) => {
+router.get('/', async (req, res, next) => {
   try {
     const posts = await knex('posts')
       .leftJoin('users', 'posts.author_id', 'users.id')
@@ -53,19 +52,21 @@ router.get('/', ensureAuthenticated, async (req, res, next) => {
 });
 
 // 创建帖子页面
-router.get('/new', ensureAuthenticated, (req, res) => {
+router.get('/new', (req, res) => {
   res.render('new_post');
 });
 
 // 创建新帖子
-router.post('/', ensureAuthenticated, upload.array('images', 5), async (req, res, next) => {
+router.post('/', upload.array('images', 5), async (req, res, next) => {
   try {
     const { content } = req.body;
     const postId = uuidv4();
+    // 这里假设匿名用户，author_id 使用一个默认值或留空
+    const authorId = 'anonymous'; // 可根据需求修改
     
     await knex('posts').insert({
       id: postId,
-      author_id: req.user.id,
+      author_id: authorId,
       content
     });
 
@@ -103,7 +104,7 @@ router.post('/', ensureAuthenticated, upload.array('images', 5), async (req, res
 });
 
 // 获取单个帖子
-router.get('/:id', ensureAuthenticated, async (req, res, next) => {
+router.get('/:id', async (req, res, next) => {
   if (!req.params.id.match(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)) {
     return res.status(400).send('Invalid post ID');
   }
@@ -167,15 +168,17 @@ router.get('/:id', ensureAuthenticated, async (req, res, next) => {
 });
 
 // 添加评论
-router.post('/:id/comments', ensureAuthenticated, async (req, res, next) => {
+router.post('/:id/comments', async (req, res, next) => {
   try {
     const { content } = req.body;
     const commentId = uuidv4();
+    // 匿名用户，author_id 使用默认值
+    const authorId = 'anonymous'; // 可根据需求修改
     
     await knex('comments').insert({
       id: commentId,
       post_id: req.params.id,
-      author_id: req.user.id,
+      author_id: authorId,
       content
     });
 
@@ -187,10 +190,11 @@ router.post('/:id/comments', ensureAuthenticated, async (req, res, next) => {
 });
 
 // 点赞帖子
-router.post('/:id/like', ensureAuthenticated, async (req, res, next) => {
+router.post('/:id/like', async (req, res, next) => {
   try {
+    // 移除用户检查，允许匿名点赞
     const existingLike = await knex('likes')
-      .where({ user_id: req.user.id, post_id: req.params.id })
+      .where({ post_id: req.params.id }) // 可选：添加某种唯一标识，如 IP
       .first();
     
     if (existingLike) {
@@ -200,8 +204,8 @@ router.post('/:id/like', ensureAuthenticated, async (req, res, next) => {
     const likeId = uuidv4();
     await knex('likes').insert({
       id: likeId,
-      user_id: req.user.id,
       post_id: req.params.id
+      // user_id 移除，因为不保存用户信息
     });
 
     res.redirect(`/posts/${req.params.id}`);
@@ -212,7 +216,7 @@ router.post('/:id/like', ensureAuthenticated, async (req, res, next) => {
 });
 
 // 点赞评论
-router.post('/comments/:id/like', ensureAuthenticated, async (req, res, next) => {
+router.post('/comments/:id/like', async (req, res, next) => {
   try {
     const comment = await knex('comments')
       .where({ id: req.params.id })
@@ -222,8 +226,9 @@ router.post('/comments/:id/like', ensureAuthenticated, async (req, res, next) =>
       return res.status(404).send('Comment not found');
     }
 
+    // 移除用户检查，允许匿名点赞
     const existingLike = await knex('likes')
-      .where({ user_id: req.user.id, comment_id: req.params.id })
+      .where({ comment_id: req.params.id }) // 可选：添加某种唯一标识
       .first();
     
     if (existingLike) {
@@ -233,8 +238,8 @@ router.post('/comments/:id/like', ensureAuthenticated, async (req, res, next) =>
     const likeId = uuidv4();
     await knex('likes').insert({
       id: likeId,
-      user_id: req.user.id,
       comment_id: req.params.id
+      // user_id 移除
     });
 
     res.redirect(`/posts/${comment.post_id}`);
@@ -244,6 +249,7 @@ router.post('/comments/:id/like', ensureAuthenticated, async (req, res, next) =>
   }
 });
 
+// 测试 GCS
 router.get('/test-gcs', async (req, res) => {
   try {
     const [buckets] = await storage.getBuckets();

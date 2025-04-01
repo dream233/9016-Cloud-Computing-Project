@@ -1,7 +1,5 @@
 const express = require('express');
 const path = require('path');
-const session = require('express-session');
-const passport = require('passport');
 const flash = require('connect-flash');
 const knex = require('./db');
 const { Storage } = require('@google-cloud/storage');
@@ -22,7 +20,7 @@ try {
 const app = express();
 console.log('Express app created');
 
-// 测试数据库连接
+// 测试数据库连接并初始化应用
 (async () => {
   try {
     await knex.raw('SELECT 1');
@@ -32,79 +30,57 @@ console.log('Express app created');
     process.exit(1);
   }
 
+  // 设置视图引擎和静态文件
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
   app.use(express.static(path.join(__dirname, 'public')));
   app.use(express.urlencoded({ extended: true }));
   console.log('View engine and middleware configured');
 
-  app.use(session({
-    secret: 'my_hardcoded_secret_key',
-    resave: false,
-    saveUninitialized: false,
-    cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
-  }));
-  console.log('Session middleware configured');
-
+  // 配置 flash（可选，如果你仍需要错误提示）
   app.use(flash());
   console.log('Flash middleware configured');
 
-  app.use(passport.initialize());
-  app.use(passport.session());
-  console.log('Passport middleware configured');
-
-  try {
-    require('./config/passport')(passport);
-    console.log('Passport configuration loaded');
-  } catch (err) {
-    console.error('Failed to load passport configuration:', err);
-    process.exit(1);
-  }
-
-  // 根路由
+  // 根路由：直接跳转到 /login
   app.get('/', (req, res) => {
-    console.log('Root route accessed');
-    console.log('Session:', req.session);
-    console.log('Authenticated:', req.isAuthenticated(), 'User:', req.user);
-    if (req.isAuthenticated()) {
-      console.log('User authenticated, redirecting to /posts');
-      res.redirect('/posts');
-    } else {
-      console.log('User not authenticated, redirecting to /login');
-      res.redirect('/login');
-    }
+    console.log('Root route accessed, redirecting to /login');
+    res.redirect('/login');
   });
 
-  // 其他路由
+  // 加载路由
   try {
     const authRoutes = require('./routes/auth');
     const postRoutes = require('./routes/posts');
     const profileRoutes = require('./routes/profile');
 
-    app.use('/', authRoutes);
-    app.use('/posts', postRoutes);
-    app.use('/profile', profileRoutes);
+    app.use('/', authRoutes);       // 挂载 auth 路由
+    app.use('/posts', postRoutes);  // 挂载 posts 路由
+    app.use('/profile', profileRoutes); // 挂载 profile 路由
     console.log('Routes loaded');
   } catch (err) {
     console.error('Failed to load routes:', err);
     process.exit(1);
   }
 
+  // 健康检查路由
   app.get('/health', (req, res) => {
     res.status(200).send('Server is healthy');
   });
+  console.log('Health check route configured');
 
+  // 启动服务器
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
 
+  // 全局错误处理
   app.use((err, req, res, next) => {
     console.error('Global error:', err.stack);
     res.status(500).render('error', { error: err.message || 'Something broke!' });
   });
 
-  // 添加 404 处理
+  // 404 处理
   app.use((req, res) => {
     console.log('404 - Requested path:', req.path);
     res.status(404).send('Cannot GET ' + req.path);
