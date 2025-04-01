@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const knex = require('./db');
 const { Storage } = require('@google-cloud/storage');
+const cookieParser = require('cookie-parser'); // 添加 cookie 支持
 
 console.log('Starting application...');
 
@@ -19,6 +20,15 @@ try {
 const app = express();
 console.log('Express app created');
 
+// 添加 cookieParser 中间件
+app.use(cookieParser());
+
+// 设置视图引擎和静态文件
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
 // 测试数据库连接并初始化应用
 (async () => {
   try {
@@ -29,11 +39,6 @@ console.log('Express app created');
     process.exit(1);
   }
 
-  // 设置视图引擎和静态文件
-  app.set('view engine', 'ejs');
-  app.set('views', path.join(__dirname, 'views'));
-  app.use(express.static(path.join(__dirname, 'public')));
-  app.use(express.urlencoded({ extended: true }));
   console.log('View engine and middleware configured');
 
   // 根路由：直接跳转到 /login
@@ -49,8 +54,9 @@ console.log('Express app created');
     const profileRoutes = require('./routes/profile');
 
     app.use('/', authRoutes);
-    app.use('/posts', postRoutes);
+    app.use('/', postRoutes); // 修改为根路径挂载，避免重复 /posts 前缀
     app.use('/profile', profileRoutes);
+
     console.log('Routes loaded');
   } catch (err) {
     console.error('Failed to load routes:', err);
