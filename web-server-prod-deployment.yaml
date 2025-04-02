@@ -37,6 +37,17 @@ spec:
       - name: credentials
         secret:
           secretName: gcp-credentials
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: web-server
+            topologyKey: "kubernetes.io/hostname"
+          - labelSelector:
+              matchLabels:
+                app: database  
+            topologyKey: "kubernetes.io/hostname"
 ---
 apiVersion: v1
 kind: Service
